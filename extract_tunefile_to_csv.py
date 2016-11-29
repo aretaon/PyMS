@@ -14,6 +14,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 import csv
 
+from openpyxl import load_workbook
 
 import time
 
@@ -24,8 +25,14 @@ DataDirs = ["/home/aretaon/AGW/RawData/Synapt",
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--files", help="Path to a file containing the basenames\
-                                     of the Waters rawfiles to parse")
+parser.add_argument("-f", "--files", help="Path to a file containing the basenames\
+                                           of the Waters rawfiles to parse")
+
+parser.add_argument("-i", "--instrumentlists", help="A comma separated list\
+                                                     of xlsx-files\
+                                                     to look\
+                                                     for further description",
+                                               type=str)
 
 args = parser.parse_args()
 
@@ -65,6 +72,19 @@ outhandler = codecs.open(outname,
                          'w',
                          encoding='utf-8')
 
+
+instrumentlists = list(args.instrumentlists.split(','))
+
+print(instrumentlists)
+
+i_list = []
+
+for li in instrumentlists:
+    print(li)
+    wb = load_workbook(filename=li, read_only=True)
+    # The lists are called Data on both instruments
+    i_list.append(wb['Data'])
+    
 DictList = []
 
 for r in rawfiles:
@@ -86,7 +106,28 @@ for r in rawfiles:
                 key = line.strip().split('\t')[0]
                 value = line.strip().split('\t')[-1]
                 ParamDict[key] = value
+
+        # extract the corresponding data from the excel lists
+
+        for sheet in i_list:
+            i = 0
+            header = []
+            for j, row in enumerate(sheet.iter_rows()):
+                # get the header
+                if j == 0:
+                    for cell in row:
+                        if cell.value != None:
+                            header.append(cell.value)
                 
+                RightRow = False
+                for idx, cell in enumerate(row):
+                    if cell.value == os.path.split(r)[1][:-4]:
+                        RightRow = True
+                    if RightRow and idx < header.index('Messzeit [min]'):
+                        ParamDict[header[idx]] = cell.value
+                        print(cell.value)
+                            
+            print(header)
         DictList.append(ParamDict)
         
     except FileNotFoundError as e:
