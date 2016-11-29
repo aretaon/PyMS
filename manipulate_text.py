@@ -20,6 +20,10 @@ def alphanum_string(s):
     for char in result:
         if old_char != char:
             new_result += char
+        else:
+            # prevent removal of double occurences of other strings than _
+            if old_char != '_':
+                new_result += char
         old_char = char
 
     return new_result

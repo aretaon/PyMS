@@ -5,7 +5,8 @@ Methods related to MaxQuant analysis
 @author: aretaon
 """
 
-def calc_rel_iBAQ(file, titles1, titles2, target_genes):
+def calc_rel_iBAQ_two_conditions(file, titles1, titles2, target_genes):
+
     """
     Calculate the relative iBAQ value of a MaxQuant output.
 
@@ -16,7 +17,11 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes):
     target_genes -- list of full or partly gene names to look for in the final
     analysis
     """
-
+    
+    import pandas as pd
+    import sys
+    import os
+    
     # turn off warnings for chained dataframe assignments
     # this is raised by the append to dataframe operation in the last 2
     # lines of this function
