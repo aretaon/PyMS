@@ -75,12 +75,9 @@ outhandler = codecs.open(outname,
 
 instrumentlists = list(args.instrumentlists.split(','))
 
-print(instrumentlists)
-
 i_list = []
 
 for li in instrumentlists:
-    print(li)
     wb = load_workbook(filename=li, read_only=True)
     # The lists are called Data on both instruments
     i_list.append(wb['Data'])
@@ -125,9 +122,7 @@ for r in rawfiles:
                         RightRow = True
                     if RightRow and idx < header.index('Messzeit [min]'):
                         ParamDict[header[idx]] = cell.value
-                        print(cell.value)
                             
-            print(header)
         DictList.append(ParamDict)
         
     except FileNotFoundError as e:
