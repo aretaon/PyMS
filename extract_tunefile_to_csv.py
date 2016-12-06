@@ -63,10 +63,12 @@ for d in DataDirs:
 
 base_rawfiles = [os.path.split(f)[1][:-4] for f in rawfiles]
 
-if args.files != None:
-    outname = '{:s}_{:s}_tune.csv'.format(thisdate, '_'.join(base_rawfiles))
+if args.files != None and len(rawfiles) < 4:
+    outname = '{:s}_{:s}_tune.tsv'.format(thisdate, '_'.join(base_rawfiles))
+elif args.files != None:
+    outname = '{:s}_multiple_tune.tsv'.format(thisdate)
 else:
-    outname = '{:s}_complete_tune.csv'.format(thisdate)
+    outname = '{:s}_complete_tune.tsv'.format(thisdate)
 
 outhandler = codecs.open(outname,
                          'w',
@@ -105,11 +107,21 @@ for r in rawfiles:
                 ParamDict[key] = value
 
         # extract the corresponding data from the excel lists
+        EndReached = False
 
         for sheet in i_list:
+            if EndReached == True:
+                #print('Reached end of {}'.format(sheet))
+                break
+            
             i = 0
             header = []
+            # avoid long searching in empty datasheets: End the search
+            # after three consecutive empty rows
+            EmptyRows = 0
             for j, row in enumerate(sheet.iter_rows()):
+                if EndReached == True:
+                    break
                 # get the header
                 if j == 0:
                     for cell in row:
@@ -118,11 +130,23 @@ for r in rawfiles:
                 
                 RightRow = False
                 for idx, cell in enumerate(row):
+                    if idx == 0 and cell.value == 'none':
+                        #print('now found an empty cell at row {} cell {}'.format(j, idx))
+                        EmptyRows += 1
+                        #print('Empty rows is {}'.format(EmptyRows))
+                        if EmptyRows > 4:
+                            # Restrict the search horizontally (by rows)
+                            EndReached = True
+                        break
+                    if cell.value != 'none':
+                        EmptyRows = 0
                     if cell.value == os.path.split(r)[1][:-4]:
                         RightRow = True
                     if RightRow and idx < header.index('Messzeit [min]'):
                         ParamDict[header[idx]] = cell.value
-                            
+                    elif idx > header.index('Messzeit [min]'):
+                        # restrict the search vertically (by column)
+                        break
         DictList.append(ParamDict)
         
     except FileNotFoundError as e:
@@ -136,9 +160,48 @@ for d in DictList:
 
 # generate an order to print
 fieldnames = sorted(list(fieldnames))
-rawfile_idx = fieldnames.index('Rawfile')
-# move the rawfile ID at the first position
-fieldnames[0], fieldnames[rawfile_idx] = fieldnames[rawfile_idx], fieldnames[0]
+
+def MoveForward(name, position, data):
+    """
+    Move a list entry at a specified position
+    
+    Requires:
+    - name: Name of entry header
+    - position: Desired final position
+    - data: Pandas dataframe
+    
+    Returns:
+    - ordered dataframe
+    """
+    
+    rawfile_idx = data.index(name)
+    # move the rawfile ID at the indicated position
+    data[position], data[rawfile_idx] = \
+    data[rawfile_idx], data[position]
+
+    return data
+    
+StandardFirstColumns = ['Rawfile',
+                'Probenname',
+                'Puffer',
+                'Kommentar',
+                'Backing',
+                'Capillary',
+                'Capillary (kV)',
+                'Cell pressure [e^-3 mbar]',
+                'Collision Energy',
+                'Transfer Collision Energy',
+                'Trap Collision Energy']
+
+FirstColumns = []
+
+for name in StandardFirstColumns:
+    if name in fieldnames:
+        FirstColumns.append(name)
+
+for name, position in zip(FirstColumns, range(len(FirstColumns))):
+    # names differ depending on the MS-Instrument used
+    fieldnames = MoveForward(name, position, fieldnames)
 
 #pp.pprint(DictList)
 
