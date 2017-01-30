@@ -2,7 +2,7 @@
 
 
 def ExtractPeakrangeAsList(fname, start=1, end='end', returntype='tuple',
-                           exclude=[(0, 0)]):
+                           exclude=[(0, 0)], points='all'):
     """
     Extract a range of spectra from an mzML file and return them
     -----------
@@ -28,12 +28,17 @@ def ExtractPeakrangeAsList(fname, start=1, end='end', returntype='tuple',
         takes a list of (start,end) tuples to be ignored during import.
         Useful for removing of spraying errors.\n
 
+    points:
+        takes an integer number of points to extract within the spectrum.
+        Useful to reduce computation time
+
     Returns: mzlist, intlist
         mzlist: m/z coordinate\n
         intlist: intensity
     """
 
     import pymzml
+    import numpy as np
 
     try:
         msrun = pymzml.run.Reader(fname)
@@ -56,9 +61,27 @@ def ExtractPeakrangeAsList(fname, start=1, end='end', returntype='tuple',
     else:
         print('exporting from %(a)s to %(b)s with exclusions' % {'a': start,
                                                                  'b': end})
+
+    # Select a subset of all spectra to reduce computation time
+    if points =='all':
+        PointsInExtraction = int(end) - int(start)
+    elif isinstance(points, int):
+        if points < end:
+            PointsInExtraction = points
+        else:
+            # avoid oversampling
+            PointsInExtraction = int(end) - int(start)
+    else:
+        print('You must provide a valid integer for points\n'+
+              'Using all data points')
+        PointsInExtraction = int(end) - int(start)   
+
+    SpectraToExtract = np.linspace(start,end,PointsInExtraction)
+    SpectraToExtract = [int(round(r, 0)) for r in SpectraToExtract]
+
     if returntype == 'tuple':
         peakslist = []
-        for i in range(start, end):
+        for i in SpectraToExtract:
             actual_peak = msrun[i].peaks
             peakslist.append(actual_peak)
 
@@ -75,7 +98,7 @@ def ExtractPeakrangeAsList(fname, start=1, end='end', returntype='tuple',
     elif returntype == 'list':
         mzlist = []
         intlist = []
-        for i in range(start, end):
+        for i in SpectraToExtract:
             for exclusion in exclude:
                 if i not in range(exclusion[0], exclusion[1]):
                     for j in msrun[i].mz:
@@ -96,9 +119,12 @@ def PlotPeaklist(peaklist, start='start', end='end', inputtype='tuple', plot='sh
 
     Keyword arguments:
         peaklist -- name of the variable containing the tuple\n
-        istuple -- set to False allows to plot the list of binary tuples
+        inputtype -- either list or tuple
+            tuple is a tuple with (all_mz, all_intensity)\n
+            list is a list of binary tuples [(mz, int), (mz, int), ...]\n
         returned by ExtractPeakrangeAsList with the value export=list\n
         plot -- 'show' for direct plotting, return for return of the plot-object
+        sg: True or False, whether filtered by savitzky golay filtering
     """
 
     import pylab as plt
@@ -109,7 +135,7 @@ def PlotPeaklist(peaklist, start='start', end='end', inputtype='tuple', plot='sh
         mz = [a for a, b in peaklist]
 
     elif inputtype == 'tuple':
-        mz, intens = zip(*peaklist)
+        mz, intens = peaklist
 
     else:
         sys.exit('Inputtype is either list or tuple!')
@@ -138,7 +164,7 @@ def PlotPeaklist(peaklist, start='start', end='end', inputtype='tuple', plot='sh
     ax.plot(mz_out, intens_out, 'black')
     ax.set_xlabel('m/z [Th]')
     ax.set_ylabel('Rel. Intensity')
-    
+
     if plot == 'show':
         plt.show()
     elif plot == 'return':
@@ -154,7 +180,8 @@ def PlotPeaklist(peaklist, start='start', end='end', inputtype='tuple', plot='sh
 #    plt.clf()
 
 
-def DigitizePeaklist(peaklist, resolution=0.5, debug=False, inputtype='tuple',
+def DigitizePeaklist(peaklist, resolution=0.5, debug=False,  sg = False,
+                     inputtype='tuple',
                      returntype='tuple'):
     """
     Bin the list of peaks so that resolution decreases
@@ -164,12 +191,16 @@ def DigitizePeaklist(peaklist, resolution=0.5, debug=False, inputtype='tuple',
         peaklist -- input peaklist as list of tuples \n
         resolution -- size of the bins, default 0.5 \n
         debug -- True activates verbose output
+        sg -- apply savitzky golay filtering
         inputtype -- tuple or list
         returntype -- tuple is a outputs two lists of mz and intensities, list
         outputs one list of tuples of mz, int
     """
     import numpy as np
     import sys
+
+    import savitzky_golay as sg
+
 
     if inputtype == 'tuple':
         mz_in, intens_in = zip(*peaklist)
@@ -212,10 +243,13 @@ def DigitizePeaklist(peaklist, resolution=0.5, debug=False, inputtype='tuple',
         mz_bins.append(element[0])
         counts.append(element[1])
 
-    if returntype == 'list':
-        return mz_bins, counts
+    if sg:
+        counts = sg.savitzky_golay(counts, 49, 3)
 
     if returntype == 'tuple':
+        return mz_bins, counts
+
+    if returntype == 'list':
         return zip(mz_bins, counts)
 
 
