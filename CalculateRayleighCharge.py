@@ -19,6 +19,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mass", type=float, help="Mass (g/mol) for the Rayleigh charge to be returned")
+parser.add_argument("--density", type=float, help="Provide density in g/cm^3 (water is 1000)")
 
 args = parser.parse_args() # in g/mol
 
@@ -27,9 +28,13 @@ molar_mass = args.mass
 surf_tension = 0.073 # in N / m (for water)
 permittivity = 8.854187817*10**-12 # in C² / N m² (for vacuum)
 
-density = 1410 + 145 * np.exp(-molar_mass/13) # calculated after
+dens = 1410 + 145 * np.exp(-molar_mass/13) # calculated after
 # Average protein density is a molecular-weight-dependent function
 # HANNES FISCHER, IGOR POLIKARPOV AND ALDO F. CRAIEVICH
+# in mg/cm³
+
+if args.density:
+    dens = args.density # in g/cm³
 
 molecules_per_droplet = 1 # assuming ion evaporation model
 
@@ -37,7 +42,7 @@ molecule_mass = molar_mass / spc.Avogadro # mass for one molecule in g
 
 molecule_mass = molecule_mass / 1000 # mass for one molecule in kg
 
-volume = molecule_mass / density # in m³
+volume = molecule_mass / dens # in m³
 
 radius = (3/(4*np.pi) * volume) ** (1/3) # in m
 
