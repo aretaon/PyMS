@@ -17,6 +17,8 @@ Plot Massign Simulations
         m/z value to end plot
     EnvelopeResolution:
         for how many points should the envelope be calculated
+    Outname:
+        name of the output file (default Massign_simulation.pdf)
 
 
 Created on Tue Jan 31 15:43:26 2017
@@ -32,20 +34,32 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--simfolder", help="path to the the folder containing simulations and raw-spectrum")
-parser.add_argument("--simnames", help="list of file names for simulations to visualise", nargs='+')
-parser.add_argument("spectrum", help="file name of raw-spectrum")
-parser.add_argument("--plotstart", type=int, help="m/z value to start plotting")
-parser.add_argument("--plotend", type=int, help="m/z value to end plotting")
+parser.add_argument("--simfolder",
+                    help="path to the the folder containing simulations and raw-spectrum")
+parser.add_argument("--simnames",
+                    help="list of file names for simulations to visualise",
+                    nargs='+')
+parser.add_argument("spectrum",
+                    help="file name of raw-spectrum")
+parser.add_argument("--plotstart",
+                    type=int, help="m/z value to start plotting")
+parser.add_argument("--plotend",
+                    type=int, help="m/z value to end plotting")
+parser.add_argument("--normalise",
+                    type=bool, help="normalise plots to max intensity")        
+parser.add_argument("--outname",
+                    help="name of the output file (default Massign_simulation.pdf")
 
-args = parser.parse_args() # in g/mol
+
+args = parser.parse_args()
 
 if args.simfolder:
     SimFolder = args.simfolder
 else:
     SimFolder = os.getcwd()
 
-SimNames = args.simnames
+if args.simnames:
+    SimNames = args.simnames
 
 Spectrum = args.spectrum
 
@@ -63,11 +77,18 @@ SpecInt = []
 
 for line in Spectrum:
     # split the data lines into array with mz and one with intensity
-    Thismz = line.split('\t')[0]
-    ThisIntensity = line.split('\t')[1]
+    Thismz = float(line.split('\t')[0])
+    ThisIntensity = float(line.split('\t')[1])
 
-    Specmz.append(Thismz)
-    SpecInt.append(ThisIntensity)
+    if (args.plotstart and args.plotstart <= Thismz) and \
+       (args.plotend and args.plotend >= Thismz):
+
+            Specmz.append(Thismz)
+            SpecInt.append(ThisIntensity)
+        
+# normalise to max intensity
+if args.normalise:
+    SpecInt = [100*i/max(SpecInt) for i in SpecInt]
 
 ########### Get data for every simulation and plot ###########
 
@@ -94,7 +115,6 @@ for idx, SimName in enumerate(SimNames):
 
     mz = []
     Intensity = []
-    datarange = []
     Header = ''
 
     FindInHeader = re.compile(r'mass: (\d*) \+\/\- (\d*).*chargestates : (\d*) to (\d*) max (\d*).*FWHM : (\d*).*attachments : (\d*).*amplitude : ([-+]?[0-9]*\.?[0-9]+).*center : ([-+]?[0-9]*\.?[0-9]+).*standard deviation : ([-+]?[0-9]*\.?[0-9]+)')
@@ -105,28 +125,35 @@ for idx, SimName in enumerate(SimNames):
             Header = Header + line.strip()
         else:
             # split the data lines into array with mz and one with intensity
-            Thismz = line.split('\t')[0]
-            ThisIntensity = line.split('\t')[1]
+            Thismz = float(line.split('\t')[0].strip())
+            ThisIntensity = float(line.split('\t')[1].strip())
+            
+            if (args.plotstart and args.plotstart <= Thismz) and \
+               (args.plotend and args.plotend >= Thismz):
 
-            mz.append(Thismz)
-            Intensity.append(ThisIntensity)
-
-            if float(ThisIntensity) > 0:
-                datarange.append(Thismz)
+                    mz.append(Thismz)
+                    Intensity.append(ThisIntensity)
+                    
+    # normalise to max intensity
+    if args.normalise:
+        Intensity = [100*i/max(Intensity) for i in Intensity]
 
     ######### Extract Information from Header ###########
 
     HeaderInfo = FindInHeader.match(Header)
 
-    Mass = float(HeaderInfo.group(1))
-    MassError = float(HeaderInfo.group(2))
-    ChargeMin = HeaderInfo.group(3)
-    ChargeMax = HeaderInfo.group(4)
-    FWHM = HeaderInfo.group(6)
-    Attachments = HeaderInfo.group(7)
-    EnvAmplitude = float(HeaderInfo.group(8))
-    EnvCenter = float(HeaderInfo.group(9))
-    EnvStd = float(HeaderInfo.group(10))
+    # only assign variables if header is found
+    if HeaderInfo:
+
+        Mass = float(HeaderInfo.group(1))
+        MassError = float(HeaderInfo.group(2))
+        ChargeMin = HeaderInfo.group(3)
+        ChargeMax = HeaderInfo.group(4)
+        FWHM = HeaderInfo.group(6)
+        Attachments = HeaderInfo.group(7)
+        EnvAmplitude = float(HeaderInfo.group(8))
+        EnvCenter = float(HeaderInfo.group(9))
+        EnvStd = float(HeaderInfo.group(10))
 
     ########## Generate envelope ############
 
@@ -147,14 +174,25 @@ for idx, SimName in enumerate(SimNames):
     ax[idx].set_xlim([PlotStart, PlotEnd])
 
     ax[idx].plot(Specmz, SpecInt, 'black')
-    ax[idx].plot(mz, Intensity, 'red', label="Mass: {} +/- {} kDa".format(round(Mass/1000,2), round(MassError/1000, 2)))
+    
+    label = "Mass: {} +/- {} kDa".format(round(Mass/1000,2),
+                                         round(MassError/1000, 2))
+    ax[idx].plot(mz, Intensity, 'red', label=label)
     #ax[idx].plot(np.linspace(PlotStart, PlotEnd, EnvelopeResolution), Envelope)
 
-    ax[idx].set_ylabel('Rel. Intensity')
-    ax[idx].legend(fontsize=8)
+    if args.normalise:
+        ax[idx].set_ylabel('% Intensity')
+    else:
+        ax[idx].set_ylabel('Intensity')
+        
+    # only label simulation if header is found
+    if HeaderInfo:
+        ax[idx].legend(fontsize=8)
 
 ax[idx].set_xlabel('m/z [Th]')
-
-outpath = os.path.join(SimFolder, 'Massign_simulation.pdf')
+if args.outname:
+    outpath = os.path.join(SimFolder, args.outname)
+else:
+    outpath = os.path.join(SimFolder, 'Massign_simulation.pdf')
 
 plt.savefig(outpath)
