@@ -18,12 +18,12 @@ def basic_stats(data):
     Returns:
     mean, std, SEM, N
     """
-    print(data)
+    # print(data)
     mean = float(data.mean())
     std = float(data.std())
     # count the filled entries by subtracting the empty one from the size
     N = len(data) - data.isnull().sum()
-    print(N)
+    # print(N)
     SEM = float(std/np.sqrt(N))
 
     return mean, std, SEM, N
