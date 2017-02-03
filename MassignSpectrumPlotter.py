@@ -115,18 +115,20 @@ for idx, Spectrum in enumerate(RawSpectra):
 
     ######### Plot ##############
 
-    # since squeeze == false we always get 2D arrays
-    ax[0][idx].set_xlim([PlotStart, PlotEnd])
+    print(ax[idx][0])
 
-    ax[0][idx].plot(mz, Intensity, 'black', label=SpecName)
+    # since squeeze == false we always get 2D arrays
+    ax[idx][0].set_xlim([PlotStart, PlotEnd])
+
+    ax[idx][0].plot(mz, Intensity, 'black', label=SpecName)
 
     if args.normalise:
-        ax[0][idx].set_ylabel('% Intensity')
+        ax[idx][0].set_ylabel('% Intensity')
     else:
-        ax[0][idx].set_ylabel('Intensity')
-    ax[0][idx].legend(fontsize=8)
+        ax[idx][0].set_ylabel('Intensity')
+    ax[idx][0].legend(fontsize=8)
 
-ax[0][idx].set_xlabel('m/z [Th]')
+ax[idx][0].set_xlabel('m/z [Th]')
 if args.outname:
     outpath = os.path.join(Folder, args.outname)
 else:
