@@ -68,6 +68,9 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
     if imputation:
 
+        # generate a copy of pex proteins to work on
+        p = pex_proteins
+
         for title in (titles1 + titles2):
 
             # take log2 from the filtered data containing the iBAQs of interest
@@ -81,15 +84,19 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
             std = subset_iBAQs.std()
             mean = subset_iBAQs.mean()
 
-            p = pex_proteins["iBAQ %s" % title].fillna(\
-                                            2**np.random.normal(loc=mean,
-                                                                scale=std))
+            p["iBAQ %s" % title].fillna(2**np.random.normal(loc=mean,
+                                                            scale=std),
+                                        inplace=True)
 
             print("=====Pex proteins of {} =====".format(title))
             print(p["iBAQ %s" % title])
 
     else:
         p = pex_proteins.fillna(0)
+
+    # all relative iBAQ calculation is done in p while the results are returned
+    # as part of pex_proteins.
+    # Thus, the input data is returned extended by the relative_iBAQ column
 
     # manipulate the iBAQ values
     for index in range(len(titles1)):
