@@ -40,11 +40,20 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
     # replace 0 by NaN
     data.replace(0, np.nan, inplace=True)
+    # use the Gene names as index
+    data.set_index(data['Gene names'], inplace=True)
 
-    # remove contaminants and decoys
-    # the truth statements must be grouped by parentheses, see
-    # http://stackoverflow.com/questions/34531416/comparing-dtyped-float64-array-with-a-scalar-of-type-bool-in-pandas-datafram#34531543
-    remain = (data['Reverse'] != '+') & (data['Potential contaminant'] != '+')
+    # avoid calculation a the inverse of an array of nans by checking first
+    # if there are any reverse proteins in the data
+    if not data['Reverse'].notnull().values.any():
+        remain = data['Potential contaminant'] != '+'
+    else:
+        # remove contaminants and decoys
+        # the truth statements must be grouped by parentheses, see
+        # http://stackoverflow.com/questions/34531416/comparing-dtyped-float64-array-with-a-scalar-of-type-bool-in-pandas-datafram#34531543
+        remain = (data['Reverse'] != '+') &\
+            (data['Potential contaminant'] != '+')
+
     filtered = data[remain]
 
     try:
@@ -63,36 +72,73 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
     # reduce the filtered list to just the Pex-Proteins
     pex_proteins = filtered[filtered['Gene names'].isin(accepted)]
 
-    print('===== Pex Proteins =====')
-    print(pex_proteins['iBAQ'])
+    # print('===== Total iBAQs =====')
+    # print(pex_proteins['iBAQ'])
 
     if imputation:
 
         # generate a copy of pex proteins to work on
         p = pex_proteins
 
-        for title in (titles1 + titles2):
+        # initialise series to collect data
+        mean_full = pd.Series()
+        std_full = pd.Series()
+        mean_subset = pd.Series()
+        std_subset = pd.Series()
+
+        # initialise the figure object
+        fig, ax = plt.subplots(1, len(titles1 + titles2), sharex=True, sharey=True, squeeze=False)
+
+        for idx, title in enumerate(titles1 + titles2):
+
+            ax[0][idx].set_title(title)
 
             # take log2 from the filtered data containing the iBAQs of interest
             log2_iBAQs = np.log2(filtered["iBAQ %s" % title])
+
+            log2_iBAQs.plot.hist(bins=100,
+                                 range=(0, 40),
+                                 ax=ax[0][idx],
+                                 color='k',
+                                 alpha=0.5)
+
+            # calculate std and mean of original distribution
+            std_full[title] = log2_iBAQs.std()
+            mean_full[title] = log2_iBAQs.mean()
 
             # calculate the percentile for 1% of the data
             quan = log2_iBAQs.quantile(q=0.01)
             # define subset with less than 1% of the values
             subset_iBAQs = log2_iBAQs[log2_iBAQs < quan]
-            # do some basic statistics to compute the distribution
-            std = subset_iBAQs.std()
-            mean = subset_iBAQs.mean()
 
-            p["iBAQ %s" % title].fillna(2**np.random.normal(loc=mean,
-                                                            scale=std),
+            subset_iBAQs.plot.hist(bins=100,
+                                   range=(0,40),
+                                   ax=ax[0][idx],
+                                   color = 'r')
+
+            # do some basic statistics to compute the distribution
+            std_subset[title] = subset_iBAQs.std()
+            mean_subset[title] = subset_iBAQs.mean()
+
+            p["iBAQ %s" % title].fillna(2**np.random.normal(loc=mean_subset[title],
+                                                            scale=std_subset[title]),
                                         inplace=True)
 
-            print("=====Pex proteins of {} =====".format(title))
-            print(p["iBAQ %s" % title])
+        d = {'mean_full': mean_full,
+             'std_full': std_full,
+             'mean_subset': mean_subset,
+             'std_subset': std_subset}
+
+        # create the dataframe
+        ImputationInfo = pd.DataFrame(d)
+
+        # save information
+        ImputationInfo.to_csv('ImputationInfo.csv')
+        plt.show()
 
     else:
         p = pex_proteins.fillna(0)
+
 
     # all relative iBAQ calculation is done in p while the results are returned
     # as part of pex_proteins.
