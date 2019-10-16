@@ -26,9 +26,12 @@ parser.add_argument("-d", "--dir", default=os.getcwd(), help="Path to the direct
 
 parser.add_argument("-o", "--outpath", default=os.getcwd(), help="Path to a folder to write the output")
 
+parser.add_argument('-a', "--all", action="store_true", default=False, help="Print all columns and not only those that differ between the samples")
+
 args = parser.parse_args()
 
 #args.dir = r'C:\Users\User\Documents\03_software\python\PyMS\watersMetadataPlotter_testdata'
+#args.all = False
 
 rawfiles = list()
 
@@ -41,16 +44,19 @@ base_rawfiles = [os.path.split(f)[1][:-4] for f in rawfiles]
 
 outname = '{:s}_complete_tune.csv'.format(os.path.basename(args.dir))
 
-DictList = []
+colnames2values = dict()
 
 headerPattern = re.compile(r'\$\$ ([^:]+)\:(.*)')
 
 for r in rawfiles:
 
     ParamDict = {}
+    
+    keys = list()
+    values = list()
 
+    ### Collection data ###
     ParamDict['Rawfile'] = os.path.split(r)[1]
-
     # encoding has to be set to latin1 as MassLynx does not use UTF-8
     try:
         inhandler = codecs.open(os.path.join(r,'_extern.inf'),
@@ -61,9 +67,9 @@ for r in rawfiles:
 
         for line in extern:
             if '\t' in line:
-                key = line.strip().split('\t')[0]
-                value = line.strip().split('\t')[-1]
-                ParamDict[key] = value
+                keys.append(line.strip().split('\t')[0])
+                values.append(line.strip().split('\t')[-1])
+#                ParamDict[key] = value
 
     except FileNotFoundError as e:
         print('Could not find _extern.inf for file {}:{}'.format(r, e))
@@ -78,24 +84,36 @@ for r in rawfiles:
 
         for line in extern:
             match= headerPattern.match(line)
-            key, value = match.groups()
-            ParamDict[key.strip()] = value.strip()
+            k, v = match.groups()
+            keys.append(k.strip())
+            values.append(v.strip())
+#            ParamDict[key.strip()] = value.strip()
 
     except FileNotFoundError as e:
         print('Could not find _HEADER.TXT for file {}:{}'.format(r, e))
 
+    ### Appending data to datatable
 
-    DictList.append(ParamDict)
+    for idx, k in enumerate(keys):
+        if k in colnames2values.keys():
+            colnames2values[k].append(values[idx])
+        else:
+            colnames2values[k] = [values[idx]]
 
-fieldnames = set()
 
-for d in DictList:
-    # use the union parameter to add the dict to the fieldnames set
-    fieldnames |= set(d.keys())
+### Optional: Remove identical columns
 
-# generate an order to print
-fieldnames = sorted(list(fieldnames))
+if args.all is False:
+    noninformative_cols  =list()
+    for colname in colnames2values.keys():
+        if len(set(colnames2values[colname])) == 1:
+            noninformative_cols.append(colname)
 
+    for k in noninformative_cols:
+        del colnames2values[k]
+        
+
+### sort by colnames ###
 
 # Reorder the df
 StandardFirstColumns = ['Rawfile',
@@ -156,47 +174,26 @@ StandardFirstColumns = ['Rawfile',
                         'Detector'
 ]
 
+fieldnames = list()
+for fc in StandardFirstColumns:
+    if fc in colnames2values.keys():
+        fieldnames.append(fc)
 
-def MoveForward(name, position, data):
-    """
-    Move a list entry at a specified position
-    
-    Requires:
-    - name: Name of entry header
-    - position: Desired final position
-    - data: Pandas dataframe
-    
-    Returns:
-    - ordered dataframe
-    """
-    
-    rawfile_idx = data.index(name)
-    # move the rawfile ID at the indicated position
-    data[position], data[rawfile_idx] = \
-    data[rawfile_idx], data[position]
-
-    return data
-
+remaining_cols = list()
+for c in colnames2values.keys():
+    if c not in fieldnames:
+        remaining_cols.append(c)
+        
+fieldnames.extend(remaining_cols)
 
 outhandler = codecs.open(os.path.join(args.outpath, outname),
                          'w',
                          encoding='utf-8')
 
-firstEntries = list()
+writer = csv.writer(outhandler,
+                    dialect='excel')
 
-for name in StandardFirstColumns:
-    if name in fieldnames:
-        firstEntries.append(name)
+writer.writerow(fieldnames)
+writer.writerows(zip(*[colnames2values[key] for key in fieldnames]))
 
-for name, position in zip(firstEntries, range(len(firstEntries))):
-    # names differ depending on the MS-Instrument used
-    fieldnames = MoveForward(name, position, fieldnames)
-
-writer = csv.DictWriter(outhandler,
-                        fieldnames=fieldnames,
-                        dialect='excel')
-writer.writeheader()
-for d in DictList:
-    writer.writerow(d)
-    
 outhandler.close()
