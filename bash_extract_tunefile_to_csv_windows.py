@@ -20,19 +20,22 @@ import time
 
 thisdate = time.strftime("%Y%m%d")
 
-DataDirs = ["/home/aretaon/AGW/RawData/Synapt",
-            "/home/aretaon/AGW/RawData/Ultima"]
+DataDirs = [r'S:\RawData\Ultima',
+            r'S:\RawData\Synapt']
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-f", "--files", help="Path to a file containing the basenames\
                                            of the Waters rawfiles to parse")
 
-parser.add_argument("-i", "--instrumentlists", help="A comma separated list\
-                                                     of xlsx-files\
-                                                     to look\
-                                                     for further description",
-                                               type=str)
+parser.add_argument("-i",
+                    "--instrumentlists",
+                    help="xlsx-files\
+                         to look\
+                         for further description (just as arguments\
+                         without commata)",
+                    nargs='+',
+                    type=str)
 
 args = parser.parse_args()
 
@@ -75,7 +78,9 @@ outhandler = codecs.open(outname,
                          encoding='utf-8')
 
 
-instrumentlists = list(args.instrumentlists.split(','))
+print(args.instrumentlists)
+
+instrumentlists = args.instrumentlists
 
 i_list = []
 
@@ -182,16 +187,16 @@ def MoveForward(name, position, data):
     return data
     
 StandardFirstColumns = ['Rawfile',
-                        'Probenname',
-                        'Puffer',
-                        'Kommentar',
-                        'Backing',
-                        'Capillary',
-                        'Capillary (kV)',
-                        'Cell pressure [e^-3 mbar]',
-                        'Collision Energy',
-                        'Transfer Collision Energy',
-                        'Trap Collision Energy']
+                'Probenname',
+                'Puffer',
+                'Kommentar',
+                'Backing',
+                'Capillary',
+                'Capillary (kV)',
+                'Cell pressure [e^-3 mbar]',
+                'Collision Energy',
+                'Transfer Collision Energy',
+                'Trap Collision Energy']
 
 FirstColumns = []
 

@@ -12,17 +12,16 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
+def calc_rel_iBAQ(file, titles, target_gene_names, normalise_to=None,
                   imputation = False):
     """
     Calculate the relative iBAQ value of a MaxQuant output.
 
     Keyword arguments:
     file -- the relative path to the input file
-    titles1 -- a list of titles as given by MQ for the condition of interest
-    titles2 -- same for the wildtype condition
-    target_genes -- list of full or partly gene names to look for in the final
-    analysis
+    titles -- a list of expepriment names as given to MQ
+    target_gene_names -- list of full or partly Protein IDs to look for in the final
+    analysis, set to None for all genes
     normalise_to -- gene name to normalise iBAQs to. NOrmalised to total iBAQ
     if None
     imputation -- impute zeros by normal distribution sampling (True or False)
@@ -40,8 +39,8 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
     # replace 0 by NaN
     data.replace(0, np.nan, inplace=True)
-    # use the Gene names as index
-    data.set_index(data['Gene names'], inplace=True)
+    # use the Protein IDs as index
+    data.set_index(data['Protein IDs'], inplace=True)
 
     # avoid calculation a the inverse of an array of nans by checking first
     # if there are any reverse proteins in the data
@@ -56,29 +55,26 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
     filtered = data[remain]
 
-    try:
-        len(titles1) == len(titles2)
-    except:
-        sys.exit("length of title lists must match!")
-
-    # generate a gene names list to filter
-    accepted = []
-    for element in filtered['Gene names']:
-        if isinstance(element, str):
-            for gene_name in target_genes:
-                if gene_name in element:
-                    accepted.append(element)
-
-    # reduce the filtered list to just the Pex-Proteins
-    pex_proteins = filtered[filtered['Gene names'].isin(accepted)]
-
-    # print('===== Total iBAQs =====')
-    # print(pex_proteins['iBAQ'])
+    # Only return a subset of genes of interest if variable is set
+    # else calculate relativie iBAQs for the whole dataset
+    if target_gene_names != None:
+        # generate a Protein IDs list to filter
+        accepted = []
+        for element in filtered['Protein IDs']:
+            if isinstance(element, str):
+                for gene_name in target_gene_names:
+                    if gene_name in element:
+                        accepted.append(element)
+    
+        # reduce the filtered list to just the Pex-Proteins
+        trgt_genes = filtered[filtered['Protein IDs'].isin(accepted)]
+    else:
+        trgt_genes = filtered
 
     if imputation:
 
         # generate a copy of pex proteins to work on
-        p = pex_proteins
+        t = trgt_genes
 
         # initialise series to collect data
         mean_full = pd.Series()
@@ -87,11 +83,13 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
         std_subset = pd.Series()
 
         # initialise the figure object
-        fig, ax = plt.subplots(1, len(titles1 + titles2), sharex=True, sharey=True, squeeze=False)
+        fig, ax = plt.subplots(1, len(titles), sharex=True, sharey=True, squeeze=False)
 
-        for idx, title in enumerate(titles1 + titles2):
+        for idx, title in enumerate(titles):
 
             ax[0][idx].set_title(title)
+            ax[0][idx].set_xlabel('Log2 iBAQ')
+            
 
             # take log2 from the filtered data containing the iBAQs of interest
             log2_iBAQs = np.log2(filtered["iBAQ %s" % title])
@@ -120,7 +118,8 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
             std_subset[title] = subset_iBAQs.std()
             mean_subset[title] = subset_iBAQs.mean()
 
-            p["iBAQ %s" % title].fillna(2**np.random.normal(loc=mean_subset[title],
+            # replace NaN by small numbers sampled from the quantile
+            t["iBAQ %s" % title].fillna(2**np.random.normal(loc=mean_subset[title],
                                                             scale=std_subset[title]),
                                         inplace=True)
 
@@ -134,34 +133,30 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
         # save information
         ImputationInfo.to_csv('ImputationInfo.csv')
-        plt.show()
+        plt.savefig('ImputationInfo.pdf')
 
     else:
-        p = pex_proteins.fillna(0)
+        t = trgt_genes.fillna(0)
 
 
     # all relative iBAQ calculation is done in p while the results are returned
-    # as part of pex_proteins.
+    # as part of trgt_genes.
     # Thus, the input data is returned extended by the relative_iBAQ column
 
     # manipulate the iBAQ values
-    for index in range(len(titles1)):
-        title1 = titles1[index]
-        title2 = titles2[index]
+    for title in titles:
 
         if normalise_to:
 
             # check if entry is available in data
-            if not p[p['Gene names'] == normalise_to].empty:
+            if not t[t['Protein IDs'] == normalise_to].empty:
 
                 # dataframe query returns dataframe with one entry and NaNs
                 # reduce to single value by summing up
-                norm_iBAQ_t1 = p[p['Gene names'] == normalise_to]["iBAQ %s" % title1].sum()
-                norm_iBAQ_t2 = p[p['Gene names'] == normalise_to]["iBAQ %s" % title2].sum()
+                norm_iBAQ_t1 = t[t['Protein IDs'] == normalise_to]["iBAQ %s" % title].sum()
 
                 # calculate the relative iBAQ values
-                rel_iBAQ_t1 = p["iBAQ %s" % title1] / norm_iBAQ_t1
-                rel_iBAQ_t2 = p["iBAQ %s" % title2] / norm_iBAQ_t2
+                rel_iBAQ_t1 = t["iBAQ %s" % title] / norm_iBAQ_t1
 
             else:
                 sys.exit("You provided a gene name to normalise to but" +
@@ -169,16 +164,39 @@ def calc_rel_iBAQ(file, titles1, titles2, target_genes, normalise_to=None,
 
         else:
             # generate a total iBAQ by summing up the filtered iBAQs per title
-            total_iBAQ_t1 = filtered['iBAQ %s' % title1].sum()
-            total_iBAQ_t2 = filtered['iBAQ %s' % title2].sum()
+            total_iBAQ_t1 = filtered['iBAQ %s' % title].sum()
 
             # calculate the relative iBAQ values
-            rel_iBAQ_t1 = p["iBAQ %s" % title1] / total_iBAQ_t1
-            rel_iBAQ_t2 = p["iBAQ %s" % title2] / total_iBAQ_t2
+            rel_iBAQ_t1 = t["iBAQ %s" % title] / total_iBAQ_t1
 
         # append to dataframe
-        pex_proteins["rel_iBAQ %s" % title1] = rel_iBAQ_t1
-        pex_proteins["rel_iBAQ %s" % title2] = rel_iBAQ_t2
+        trgt_genes["rel_iBAQ_%s" % title] = rel_iBAQ_t1
 
-    return pex_proteins
+    return trgt_genes
 
+def ReadProteinGroups(file):
+    """
+    Open a MaxQuant protein groups file and return it as pandas dataframe
+    """
+    pg = pd.read_csv(file,
+                   delimiter='\t')
+
+    # avoid calculation a the inverse of an array of nans by checking first
+    # if there are any reverse proteins in the data
+    if not pg['Reverse'].notnull().values.any():
+        remain = pg['Potential contaminant'] != '+'
+    else:
+        # remove contaminants and decoys
+        # the truth statements must be grouped by parentheses, see
+        # http://stackoverflow.com/questions/34531416/comparing-dtyped-float64-array-with-a-scalar-of-type-bool-in-pandas-datafram#34531543
+        remain = (pg['Reverse'] != '+') &\
+            (pg['Potential contaminant'] != '+')
+    
+    data = pg[remain].copy()
+    
+    # replace 0 by NaN
+    data.replace(0, np.nan, inplace=True)
+
+    return data
+
+    

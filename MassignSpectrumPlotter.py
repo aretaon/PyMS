@@ -78,7 +78,8 @@ for SpecName in SpectraList:
                     
         # normalise to max intensity
         if args.normalise:
-            SpecInt = [100*i/max(SpecInt) for i in SpecInt]
+            maxSpecInt = max(SpecInt)
+            SpecInt = [100*i/maxSpecInt for i in SpecInt]
 
         ThisSpec = (Specmz[:], SpecInt[:], SpecName)
         # store mz and intensity as tuple in list
