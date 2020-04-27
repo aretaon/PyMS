@@ -38,6 +38,5 @@ __pycache__
 ehthumbs.db
 Thumbs.db_
 
-
-build/*
-watersMetadataPlotter_testdata/*
+*/build/*
+/testdata/

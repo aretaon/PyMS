@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['watersMetadataPlotter.py'],
-             pathex=['C:\\Users\\User\\Documents\\03_software\\python\\PyMS'],
+a = Analysis(['plotSequenceCoverageIntensity.py'],
+             pathex=['C:\\Users\\User\\Documents\\03_software\\python\\PyMS\\scripts', 'C:\\Users\\User\\Documents\\03_software\\python\\PyMS\\modules'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -21,7 +21,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='watersMetadataPlotter',
+          name='plotSequenceCoverageIntensity',
           debug=False,
           strip=False,
           upx=True,

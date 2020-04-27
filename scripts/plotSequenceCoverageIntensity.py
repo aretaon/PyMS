@@ -1,18 +1,24 @@
 import pandas as pd
 import numpy as np
-import sys, os
+import os, sys
+import pkg_resources.py2_warn
 
 import matplotlib.pyplot as plt
+import argparse
 
-sys.path.append(r'Z:\03_software\python')
-from PyMS import Sequences as Seq
+sys.path.append('../modules')
+import Sequences as Seq
 
-os.chdir(r'C:\Users\User\Documents\02_experiments\07_instrument_tests\jb07b_native_MS_membrane_proteins\20191021_mq_analysis')
+parser = argparse.ArgumentParser()
+parser.add_argument('txt_path', help="Path to the MaxQuant txt folder")
+parser.add_argument('target_name', help="Name of the target protein as stored in the fasta file")
+parser.add_argument('fasta_path', help="Path to fasta file")
+args = parser.parse_args()
 
-infile = 'evidence.txt'
-targetProtein = 'AcrB_calixar'
+infile = os.path.join(args.txt_path, 'evidence.txt')
+targetProtein = args.target_name
 
-fastafile = '20191021_AcrB.fasta'
+fastafile = args.fasta_path
 
 data = pd.read_csv(infile, delimiter='\t')
 data = data[data['Proteins'].str.contains(targetProtein)]
@@ -47,10 +53,6 @@ def generate_plot(df, thisSequence, label=None):
         ax.plot(pos, relIntensities[pos], 'o', color=colors[pos], alpha=0.5)
         
     ax.legend()
-#    ax.set_xlabel('Sequence')
-#    plt.xticks(np.arange(len(thisIntensity)),
-#            list(thisSequence),
-#            rotation=0)
     
     ax.set_xlabel('Sequence position')
     plt.xticks(np.arange(0, len(thisSequence), 50))
