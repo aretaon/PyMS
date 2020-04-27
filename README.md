@@ -17,7 +17,7 @@ Raw files generated from Waters instruments come as a folder labeled FILE.raw co
 In case of multiple raw files, keeping track of which file contains which measurement can be tedious. This tool summarises all raw files present in a folder by generating a single csv file from their metadata.
 
 
-usage: watersMetadataPlotter.exe [-h] [-d DIR] [-o OUTPATH] [-a]
+**usage: watersMetadataPlotter.exe [-h] [-d DIR] [-o OUTPATH] [-a]**
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -27,3 +27,20 @@ optional arguments:
   -a, --all             Print all columns and not only those that differ
                         between the samples
 
+The script generates a csv file named FOLDERNAME_complete_tune.csv that can be viewed and edited in any spreadsheet software.
+
+#### plotSequenceCoverageIntensity
+
+Generates a scatter plot of the sum of MaxQuant peptide intensities (from evidence.txt) vs the position of each amino acid in the sequence. Thereby sequence coverage and for example presence degradation products can easily be investigated.
+
+**usage: plotSequenceCoverageIntensity.exe [-h] txt_path target_name fasta_path**
+
+positional arguments:
+  txt_path     Path to the MaxQuant txt folder
+  target_name  Name of the target protein as stored in the fasta file
+  fasta_path   Path to fasta file
+
+optional arguments:
+  -h, --help   show this help message and exit
+  
+### Modules intended to be loaded into python scripts (Located at ./modules)
