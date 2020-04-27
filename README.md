@@ -16,8 +16,6 @@ Files are generally either Python modules that can be used for scripting or more
 Raw files generated from Waters instruments come as a folder labeled FILE.raw containing all the spectra information including metadata on which parameters the measurement was started with, descriptions and so on.
 In case of multiple raw files, keeping track of which file contains which measurement can be tedious. This tool summarises all raw files present in a folder by generating a single csv file from their metadata.
 
-Usage:
-------
 
 usage: watersMetadataPlotter.exe [-h] [-d DIR] [-o OUTPATH] [-a]
 
