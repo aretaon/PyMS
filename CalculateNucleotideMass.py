@@ -27,16 +27,16 @@ with open('nucleotide_modifications.txt', 'r') as inf:
             if line[3] == 'X':
                 threeprime_mod2mass[line[0]] = float(line[1])
 ##%
-#
-#sequence= 'GAUGAGGGGUCACAUAACCACACUGUUGACUACCUCAUUCCUGGUUUUUGGCCUCCACAUC'
-#seq_type = 'RNA'
-#fiveprime_mod = 'Cyanine (CY) 5'
-#threeprime_mod = "3'-BHQ-1 (Black Hole Quencher)"
 
-sequence= 'UGAGGUAGUAGGUUGUGUGGUU'
+sequence= 'GAUGAGGGGUCACAUAACCACACUGUUGACUACCUCAUUCCUGGUUUUUGGCCUCCACAUC'
 seq_type = 'RNA'
-fiveprime_mod = 'OH'
-threeprime_mod = 'None'
+fiveprime_mod = 'Cyanine (CY) 5'
+threeprime_mod = "3'-BHQ-1 (Black Hole Quencher)"
+
+#sequence= 'UGAGGUAGUAGGUUGUGUGGUU'
+##seq_type = 'RNA'
+#fiveprime_mod = 'OH'
+#threeprime_mod = 'None'
 
 mass = 0
 mass += fiveprime_mod2mass[fiveprime_mod]

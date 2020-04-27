@@ -14,8 +14,9 @@ Created on Tue Mar  5 13:38:49 2019
 import argparse
 import os
 import re
+import pandas as pd
+import numpy as np
 import codecs
-import csv
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dir", default=os.getcwd(), help="Path to the directory containing the raw files")
@@ -28,7 +29,7 @@ args = parser.parse_args()
 #args.dir = r'C:\Users\User\Documents\03_software\python\PyMS\watersMetadataPlotter_testdata'
 #args.all = False
 #args.outpath = r'C:\Users\User\Documents\03_software\python\PyMS\watersMetadataPlotter_testdata'
-
+#
 ##########
 
 ## Find the rawfiles to look at
@@ -47,7 +48,6 @@ outname = '{:s}_complete_tune.csv'.format(os.path.basename(args.dir))
 ## parse _extern.inf and _HEADER.TXT for key value pairs
 headerPattern = re.compile(r'\$\$ ([^:]+)\:(.*)')
 data = list()
-all_colnames = list()
 
 def add2dict(d, k, v):
     if k in d.keys():
@@ -61,8 +61,6 @@ for r in rawfiles:
 
     ### Collection data ###
     ParamDict['Rawfile'] = os.path.split(r)[1]
-    all_colnames.append('Rawfile')
-
     # encoding has to be set to latin1 as MassLynx does not use UTF-8
     try:
         inhandler = codecs.open(os.path.join(r,'_extern.inf'),
@@ -77,7 +75,6 @@ for r in rawfiles:
                 v = line.strip().split('\t')[-1]
 
                 add2dict(ParamDict, k, v.strip())
-                all_colnames.append(k)
 
     except FileNotFoundError as e:
         print('Could not find _extern.inf for file {}:{}'.format(r, e))
@@ -93,14 +90,22 @@ for r in rawfiles:
             match= headerPattern.match(line)
             k, v = match.groups()
             add2dict(ParamDict, k, v.strip())
-            all_colnames.append(k)
 
     except FileNotFoundError as e:
         print('Could not find _HEADER.TXT for file {}:{}'.format(r, e))
 
     data.append(ParamDict)
 
-all_colnames = list(set(all_colnames))
+data = pd.DataFrame(data)
+# remove all columns with only empthy strings inside
+data.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+data.dropna(how='all', axis=1, inplace=True)
+
+# remove all columns with unchanged values between the files
+if args.all is False:
+    nunique = data.apply(pd.Series.nunique)
+    cols_to_drop = nunique[nunique == 1].index
+    data.drop(cols_to_drop, axis=1, inplace = True)
 
 ### sort by colnames ###
 
@@ -165,44 +170,17 @@ StandardFirstColumns = ['Rawfile',
 
 fieldnames = list()
 for fc in StandardFirstColumns:
-    if fc in all_colnames:
+    if fc in data.columns:
         fieldnames.append(fc)
 
 remaining_cols = list()
-for c in all_colnames:
+for c in data.columns:
     if c not in fieldnames:
         remaining_cols.append(c)
 
 fieldnames.extend(remaining_cols)
 
-d = list()
-for idx, c in enumerate(fieldnames):
-    col = ['']*len(rawfiles)
-    for r, raw in enumerate(rawfiles):
-        if c in data[r].keys():
-            col[r] = data[r][c]
+data = data.reindex(columns=fieldnames)
 
-    d.append(col)
+data.to_csv(os.path.join(args.outpath, outname), index=False)
 
-### Optional: Remove identical columns
-
-if args.all is False:
-    tmp_header = list()
-    tmp = list()
-    for idx, col in enumerate(d):
-        if len(set(col)) != 1:
-            tmp.append(col)
-            tmp_header.append(fieldnames[idx])
-
-    d = tmp
-    fieldnames = tmp_header
-
-with codecs.open(os.path.join(args.outpath, outname),
-                 'w',
-                 encoding='utf-8') as out:
-    
-    writer = csv.writer(out,
-                    dialect='excel')
-
-    writer.writerow(fieldnames)
-    writer.writerows(list(map(list, zip(*d))))

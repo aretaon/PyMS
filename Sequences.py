@@ -27,8 +27,7 @@ def ReadFasta(fname):
                 # use the inherent booleaness of string
                 # every string is automatically a boolean TRUE
                 if sequence:
-                    sequence_list.append(sequence)
-                
+                    sequence_list.append(sequence)  
                 if '|' in line:
                     # take the part after the vertical line if present
                     ID = line.split('|')[1]

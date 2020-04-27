@@ -7,15 +7,15 @@ import matplotlib.pyplot as plt
 sys.path.append(r'Z:\03_software\python')
 from PyMS import Sequences as Seq
 
-os.chdir(r'C:\Users\User\Documents\02_experiments\10_ag_behrens\jb10d_HuR\201910121_hur_MQ')
+os.chdir(r'C:\Users\User\Documents\02_experiments\07_instrument_tests\jb07b_native_MS_membrane_proteins\20191021_mq_analysis')
 
 infile = 'evidence.txt'
-targetProtein = 'HuR'
+targetProtein = 'AcrB_calixar'
 
-fastafile = 'hur.fasta'
+fastafile = '20191021_AcrB.fasta'
 
 data = pd.read_csv(infile, delimiter='\t')
-data = data[data['Proteins'] == targetProtein]
+data = data[data['Proteins'].str.contains(targetProtein)]
 data = data[data['Intensity'].notnull()]
 
 IDList, sequenceList = Seq.ReadFasta(fastafile)
@@ -47,10 +47,14 @@ def generate_plot(df, thisSequence, label=None):
         ax.plot(pos, relIntensities[pos], 'o', color=colors[pos], alpha=0.5)
         
     ax.legend()
-    ax.set_xlabel('Sequence')
-    plt.xticks(np.arange(len(thisIntensity)),
-            list(thisSequence),
-            rotation=0)
+#    ax.set_xlabel('Sequence')
+#    plt.xticks(np.arange(len(thisIntensity)),
+#            list(thisSequence),
+#            rotation=0)
+    
+    ax.set_xlabel('Sequence position')
+    plt.xticks(np.arange(0, len(thisSequence), 50))
+    
     ax.set_ylabel('Rel Cumulative Intensity')
     ax.set_ylim(bottom=0)
 
