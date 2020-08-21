@@ -1,9 +1,9 @@
 import numpy as np
 import sys, os
-sys.path.append(r'C:\Users\User\Documents\03_software\python')
-from PyMS import Sequences as Seq
-from PyMS import CalculateMW as calcMW
 
+sys.path.append(r'C:\Users\User\Documents\03_software\python')
+import PyMS.modules.Sequences as Seq
+import PyMS.modules.CalculateMW as calcMW
 
 class spectrum(object):
     def __init__(self, start_nm=190, stop_nm=260, step_nm=1):
@@ -94,7 +94,9 @@ class spectrum(object):
         print(conc_mg_per_mL)
         print(pathlength_cm)
         # Calculate mean residue weighted ellipticity
-        self.mrwe_deg_cm_2_dmol = self.ellipticity_mdeg * (142.5*3300/5610051) * MRW_g_per_mol / (conc_mg_per_mL * pathlength_cm)
+        #self.mrwe_deg_cm_2_dmol = self.ellipticity_mdeg * (142.5*3300/5610051) * MRW_g_per_mol / (conc_mg_per_mL * pathlength_cm)
+        self.mrwe_deg_cm_2_dmol = self.ellipticity_mdeg * 0.1 * MRW_g_per_mol / (conc_mg_per_mL * pathlength_cm)
+
 
     def add(self, new_spectrum):
         if np.array_equal(self.wavelength_nm, new_spectrum.wavelength_nm):

@@ -1,13 +1,12 @@
 import pandas as pd
 import numpy as np
 import os, sys
-import pkg_resources.py2_warn
 
 import matplotlib.pyplot as plt
 import argparse
 
-sys.path.append('../modules')
-import Sequences as Seq
+sys.path.append(r'C:\Users\User\Documents\03_software\python')
+import PyMS.modules.Sequences as Seq
 
 parser = argparse.ArgumentParser()
 parser.add_argument('txt_path', help="Path to the MaxQuant txt folder")
@@ -55,7 +54,10 @@ def generate_plot(df, thisSequence, label=None):
     ax.legend()
     
     ax.set_xlabel('Sequence position')
-    plt.xticks(np.arange(0, len(thisSequence), 50))
+#    plt.xticks(np.arange(0, len(thisSequence), 50))
+    plt.xticks(np.arange(len(thisIntensity)),
+           list(thisSequence),
+           rotation=0)
     
     ax.set_ylabel('Rel Cumulative Intensity')
     ax.set_ylim(bottom=0)
