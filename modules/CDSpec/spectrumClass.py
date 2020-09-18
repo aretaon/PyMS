@@ -44,11 +44,12 @@ class spectrum(object):
                 if line.startswith('XYDATA'):
                     datablock = True
                 elif datablock is True:
-                    x, y1, y2 = [i.strip() for i in line.strip().split()]
+                    # in case of german data layout, replace comma
+                    linedata = [i.strip().replace(',', '.') for i in line.strip().split()]
                     for idx, wl_self in enumerate(self.wavelength_nm):
-                        if float(x) == float(wl_self):
-                            self.ellipticity_mdeg[idx] = y1
-                            self.detector_V[idx] = y2
+                        if float(linedata[0]) == float(wl_self):
+                            self.ellipticity_mdeg[idx] = linedata[1]
+                            self.detector_V[idx] = linedata[2]
                             break
 
                 line = inf.readline().strip()

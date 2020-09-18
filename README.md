@@ -46,3 +46,14 @@ optional arguments:
   -h, --help   show this help message and exit
 ```
 ### Modules intended to be loaded into python scripts (Located at ./modules)
+
+Import of modules in script is done as follows
+
+```
+sys.path.append(PATHTOPYMS)
+from PyMS.modules import Sequences as Seq
+from PyMS.modules import CalculateMW as calcMW
+from PyMS.modules.CDSpec import spectrumClass
+```
+
+Please also refer to the example scripts provided in the example-folder
