@@ -12,6 +12,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('txt_path', help="Path to the MaxQuant txt folder")
 parser.add_argument('target_name', help="Name of the target protein as stored in the fasta file")
 parser.add_argument('fasta_path', help="Path to fasta file")
+parser.add_argument('--use_index', dest='aaindex', action='store_true', help='Use amino acid indices for x axis')
+parser.add_argument('--no_index', dest='aaindex', action='store_false', help='Use resnames for x axis')
+parser.set_defaults(aaindex=False)
 args = parser.parse_args()
 
 infile = os.path.join(args.txt_path, 'evidence.txt')
@@ -54,10 +57,12 @@ def generate_plot(df, thisSequence, label=None):
     ax.legend()
     
     ax.set_xlabel('Sequence position')
-#    plt.xticks(np.arange(0, len(thisSequence), 50))
-    plt.xticks(np.arange(len(thisIntensity)),
-           list(thisSequence),
-           rotation=0)
+    if args.aaindex is True:
+        plt.xticks(np.arange(0, len(thisSequence), 50))
+    else:
+        plt.xticks(np.arange(len(thisIntensity)),
+               list(thisSequence),
+               rotation=0)
     
     ax.set_ylabel('Rel Cumulative Intensity')
     ax.set_ylim(bottom=0)
